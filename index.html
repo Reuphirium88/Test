@@ -10,13 +10,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Calm Harmony (Warm neutrals with soft blue/green accents) -->
-    <!-- Application Structure Plan: A single-page dashboard design. Top section for key daily stats, now including a local sentiment analysis. Main area features an interactive timeline of chat messages filterable by participant and theme. A new local summary button provides a high-level overview. A dedicated section for data visualizations (bar chart, donut chart) provides quantitative insights. This structure transforms a linear chat log into an explorable, multi-faceted report. -->
+    <!-- Application Structure Plan: A single-page dashboard design. Top section for key daily stats, now including local sentiment analysis and peak activity time. A new section for key contributor analysis is added. Main area features an interactive timeline of chat messages filterable by participant, theme, and a new search input. This structure transforms a linear chat log into an explorable, multi-faceted report. -->
     <!-- Visualization & Content Choices:
     - Report Info: Communication volume per person -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for details -> Justification: Easily compare participation levels.
     - Report Info: Topics of discussion -> Goal: Inform/Proportions -> Viz: Donut Chart (Chart.js) -> Interaction: Hover for percentage -> Justification: Quickly understand the main focus of the day's conversations.
-    - Report Info: Chronological chat log -> Goal: Organize/Inform -> Viz: Themed & color-coded message cards (HTML/CSS) -> Interaction: Filtering by theme/person -> Justification: Structures the narrative and allows focused reading.
+    - Report Info: Chronological chat log -> Goal: Organize/Inform -> Viz: Themed & color-coded message cards (HTML/CSS) -> Interaction: Filtering by theme/person/search -> Justification: Structures the narrative and allows focused reading.
     - Report Info: Daily Summary -> Goal: Inform/Summarize -> Viz: Modal with generated text -> Interaction: Button click -> Justification: Provides a quick, template-based overview of the entire day. Method: Local JavaScript.
     - Report Info: Team Sentiment -> Goal: Inform/Analyze -> Viz: Card with text and button -> Interaction: Button click -> Justification: Dynamically analyzes the team's mood based on keywords. Method: Local JavaScript.
+    - Report Info: Peak Activity -> Goal: Inform -> Viz: Stat Card -> Justification: Highlights the busiest hour of the day. Method: Local JavaScript.
+    - Report Info: Key Contributors -> Goal: Compare/Organize -> Viz: Interactive Ranked List -> Interaction: Dropdown selection -> Justification: Identifies key players in specific topics. Method: Local JavaScript.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -99,7 +101,7 @@
                     <h2 class="text-2xl font-semibold text-gray-800">Сводка дня</h2>
                     <p class="mt-2 text-gray-600">Ключевые показатели и события за прошедший день. Этот раздел дает общее представление об атмосфере и основных темах обсуждения в команде.</p>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
                     <div class="bg-white p-4 rounded-lg shadow">
                         <p class="text-3xl font-bold text-blue-600" id="participants-count">6</p>
                         <p class="text-sm text-gray-500 mt-1">Участников</p>
@@ -113,11 +115,15 @@
                             <p class="text-3xl font-bold text-amber-600">🤔</p>
                          </div>
                          <p class="text-sm text-gray-500 mt-1">Настроение</p>
-                         <button id="analyze-sentiment-btn" class="mt-2 text-xs bg-blue-500 text-white py-1 px-2 rounded-full hover:bg-blue-600 transition-colors">Анализировать</button>
+                         <button id="analyze-sentiment-btn" class="mt-2 text-xs bg-blue-500 text-white py-1 px-2 rounded-full hover:bg-blue-600 transition-colors">Анализ</button>
                     </div>
                     <div class="bg-white p-4 rounded-lg shadow">
                         <p class="text-lg font-semibold text-rose-600 truncate">Проблема с паролем</p>
                         <p class="text-sm text-gray-500 mt-1">Главная проблема</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-3xl font-bold text-purple-600" id="peak-hour">-</p>
+                        <p class="text-sm text-gray-500 mt-1">Пик активности</p>
                     </div>
                 </div>
             </section>
@@ -142,6 +148,17 @@
                     </div>
                 </div>
             </section>
+            
+            <section id="contributors" class="mb-12 bg-white p-6 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-center text-gray-800 mb-4">Ключевые участники по темам</h2>
+                <p class="mt-2 text-gray-600 max-w-3xl mx-auto text-center mb-6">Узнайте, кто внес наибольший вклад в обсуждение конкретных тем. Выберите тему из списка, чтобы увидеть рейтинг участников.</p>
+                <div class="flex justify-center items-center gap-4">
+                    <select id="theme-selector" class="p-2 border border-gray-300 rounded-lg bg-white">
+                    </select>
+                </div>
+                <div id="contributor-results" class="mt-6">
+                </div>
+            </section>
 
             <section id="timeline">
                 <div class="text-center mb-8">
@@ -157,9 +174,13 @@
                         <h3 class="font-semibold text-gray-700 mb-2">Фильтр по участникам:</h3>
                         <div id="participant-filters" class="flex flex-wrap gap-2"></div>
                     </div>
-                    <div>
+                    <div class="mb-4">
                         <h3 class="font-semibold text-gray-700 mb-2">Фильтр по темам:</h3>
                         <div id="theme-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                         <h3 class="font-semibold text-gray-700 mb-2">Поиск по сообщениям:</h3>
+                         <input type="text" id="search-input" placeholder="Введите слово для поиска..." class="w-full p-2 border border-gray-300 rounded-lg">
                     </div>
                 </div>
 
@@ -271,6 +292,71 @@
                 <p><strong>Итог:</strong> День был насыщенным, с фокусом на решении рабочих задач, но также нашлось время для личных обсуждений и юмора.</p>
             `;
         }
+        
+        function analyzePeakActivity() {
+            const hourCounts = {};
+            chatData.forEach(msg => {
+                const hour = msg.time.split(':')[0];
+                hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+            });
+            let peakHour = '';
+            let maxMessages = 0;
+            for (const hour in hourCounts) {
+                if (hourCounts[hour] > maxMessages) {
+                    maxMessages = hourCounts[hour];
+                    peakHour = hour;
+                }
+            }
+            document.getElementById('peak-hour').textContent = peakHour ? `${peakHour}:00` : '-';
+        }
+
+        function setupContributorAnalysis() {
+            const selector = document.getElementById('theme-selector');
+            themes.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme;
+                option.textContent = theme;
+                selector.appendChild(option);
+            });
+            selector.addEventListener('change', (e) => displayContributors(e.target.value));
+            displayContributors(themes[0]);
+        }
+
+        function displayContributors(theme) {
+            const resultsContainer = document.getElementById('contributor-results');
+            resultsContainer.innerHTML = '';
+
+            const contributors = {};
+            chatData.forEach(msg => {
+                if (msg.theme === theme) {
+                    contributors[msg.author] = (contributors[msg.author] || 0) + 1;
+                }
+            });
+
+            const sortedContributors = Object.entries(contributors).sort((a, b) => b[1] - a[1]);
+
+            if (sortedContributors.length === 0) {
+                resultsContainer.innerHTML = `<p class="text-center text-gray-500">Нет данных по этой теме.</p>`;
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'space-y-3 max-w-md mx-auto';
+            sortedContributors.forEach(([author, count], index) => {
+                const authorColorClass = authorColors[author] || 'text-gray-700';
+                const listItem = document.createElement('li');
+                listItem.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg';
+                listItem.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="font-bold text-lg mr-3 ${authorColorClass}">${index + 1}.</span>
+                        <span class="font-semibold ${authorColorClass}">${author}</span>
+                    </div>
+                    <span class="text-gray-600 font-medium">${count} сообщен${count === 1 ? 'ие' : (count > 1 && count < 5 ? 'ия' : 'ий')}</span>
+                `;
+                list.appendChild(listItem);
+            });
+            resultsContainer.appendChild(list);
+        }
 
         function setupLocalFeatures() {
             const summaryBtn = document.getElementById('generate-summary-btn');
@@ -295,6 +381,9 @@
                     sentimentDisplay.innerHTML = `<p class="text-3xl font-bold text-amber-600" title="${sentiment.reason}">${sentiment.emoji}</p>`;
                 }, 500);
             });
+            
+            analyzePeakActivity();
+            setupContributorAnalysis();
         }
 
         function setupModal() {
@@ -313,17 +402,23 @@
         function setupFilters() {
             const participantFiltersContainer = document.getElementById('participant-filters');
             const themeFiltersContainer = document.getElementById('theme-filters');
+            const searchInput = document.getElementById('search-input');
+            
             let participantButtons = `<button class="filter-btn active" data-filter="all" data-type="participant">Все</button>`;
             participants.forEach(p => { participantButtons += `<button class="filter-btn" data-filter="${p}" data-type="participant">${p}</button>`; });
             participantFiltersContainer.innerHTML = participantButtons;
+            
             let themeButtons = `<button class="filter-btn active" data-filter="all" data-type="theme">Все темы</button>`;
             themes.forEach(t => { themeButtons += `<button class="filter-btn" data-filter="${t}" data-type="theme">${t}</button>`; });
             themeFiltersContainer.innerHTML = themeButtons;
+            
             document.querySelectorAll('.filter-btn').forEach(button => {
                 button.className = 'filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors';
                 if(button.dataset.filter === 'all') button.classList.add('active');
                 button.addEventListener('click', handleFilterClick);
             });
+            
+            searchInput.addEventListener('input', applyFilters);
         }
         
         function handleFilterClick(event) {
@@ -338,8 +433,17 @@
 
         function applyFilters() {
             let filteredData = chatData;
-            if (activeParticipantFilter !== 'all') filteredData = filteredData.filter(item => item.author === activeParticipantFilter);
-            if (activeThemeFilter !== 'all') filteredData = filteredData.filter(item => item.theme === activeThemeFilter);
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+            if (activeParticipantFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.author === activeParticipantFilter);
+            }
+            if (activeThemeFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.theme === activeThemeFilter);
+            }
+            if (searchTerm) {
+                filteredData = filteredData.filter(item => item.text.toLowerCase().includes(searchTerm));
+            }
             renderTimeline(filteredData);
         }
 
