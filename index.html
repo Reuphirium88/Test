@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный отчет: Хроники рабочего дня 23.07.2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Warm neutrals with soft blue/green accents) -->
+    <!-- Application Structure Plan: A single-page dashboard design. Top section for key daily stats. Main area features an interactive timeline of chat messages filterable by participant and theme (e.g., 'Client Issues', 'Vacation Plans'). A dedicated section for data visualizations (bar chart for message count, donut chart for theme distribution) provides quantitative insights. This structure transforms a linear chat log into an explorable, multi-faceted report, allowing users to quickly grasp key events, analyze communication patterns, and focus on specific topics, which is more usable than a simple text document. -->
+    <!-- Visualization & Content Choices:
+    - Report Info: Communication volume per person -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for details -> Justification: Easily compare participation levels.
+    - Report Info: Topics of discussion -> Goal: Inform/Proportions -> Viz: Donut Chart (Chart.js) -> Interaction: Hover for percentage -> Justification: Quickly understand the main focus of the day's conversations.
+    - Report Info: Chronological chat log -> Goal: Organize/Inform -> Viz: Themed & color-coded message cards (HTML/CSS) -> Interaction: Filtering by theme/person -> Justification: Structures the narrative and allows focused reading.
+    - Report Info: Absurd client stories -> Goal: Engage/Highlight -> Viz: Stylized blockquotes (HTML/CSS) -> Interaction: None -> Justification: Emphasizes humorous/key moments.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* neutral-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+        .filter-btn.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+        .theme-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Хроники рабочего дня</h1>
+            <p class="text-lg text-gray-500 mt-2">23 июля 2025</p>
+        </header>
+
+        <main>
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="mb-12">
+                 <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Сводка дня</h2>
+                    <p class="mt-2 text-gray-600">Ключевые показатели и события за прошедший день. Этот раздел дает общее представление об атмосфере и основных темах обсуждения в команде.</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-3xl font-bold text-blue-600" id="participants-count">6</p>
+                        <p class="text-sm text-gray-500 mt-1">Участников</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-3xl font-bold text-emerald-600" id="messages-count">230+</p>
+                        <p class="text-sm text-gray-500 mt-1">Сообщений</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-3xl font-bold text-amber-600">🤯</p>
+                        <p class="text-sm text-gray-500 mt-1">Настроение</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-lg font-semibold text-rose-600 truncate">Проблема с паролем</p>
+                        <p class="text-sm text-gray-500 mt-1">Главная проблема</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Visualizations Section -->
+            <section id="visuals" class="mb-12 bg-white p-6 rounded-lg shadow">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-semibold text-gray-800">Аналитика дня</h2>
+                    <p class="mt-2 text-gray-600 max-w-3xl mx-auto">Визуализация данных из переписки помогает лучше понять динамику общения. Диаграммы показывают распределение сообщений по участникам и по основным темам, выявляя наиболее активных коллег и ключевые фокусы обсуждений.</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="w-full">
+                        <h3 class="text-lg font-semibold text-center mb-2">Активность участников</h3>
+                        <div class="chart-container">
+                            <canvas id="participantsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="text-lg font-semibold text-center mb-2">Темы обсуждений</h3>
+                         <div class="chart-container">
+                            <canvas id="topicsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline Section -->
+            <section id="timeline">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-semibold text-gray-800">Лента событий</h2>
+                    <p class="mt-2 text-gray-600">Полная хроника событий дня. Используйте фильтры ниже, чтобы сосредоточиться на сообщениях конкретных участников или на определенных темах, таких как решение проблем, взаимопомощь или планирование отпуска.</p>
+                </div>
+                
+                <!-- Filters -->
+                <div class="bg-white p-4 rounded-lg shadow mb-8 sticky top-0 z-10">
+                    <div class="mb-4">
+                        <h3 class="font-semibold text-gray-700 mb-2">Фильтр по участникам:</h3>
+                        <div id="participant-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-700 mb-2">Фильтр по темам:</h3>
+                        <div id="theme-filters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div id="timeline-container" class="space-y-6">
+                    <!-- Messages will be injected here by JS -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const chatData = [
+            { author: 'Елизавета Семченко', time: '10:29', text: 'у меня вчера случайно обновился яндекс и теперь у меня проблемы)))', theme: 'Тех. проблемы' },
+            { author: 'Маргарита', time: '10:30', text: 'Просто я, которая... Работать или не работать? Работай, Рита. Работай во сне.', theme: 'Размышления' },
+            { author: 'Маргарита', time: '10:30', text: 'Так(( попробуй в настройках браузера в разрешениях все разрешить', theme: 'Взаимопомощь' },
+            { author: 'Ксюша', time: '10:36', text: 'Рит, лучше отдыхай. успеешь наработаться так, что тошнить будет. выкинь эту мысль из головы и наслаждайся отдыхом. всех денег не заработать, а менталку просрать запросто.', theme: 'Взаимопомощь' },
+            { author: 'Маргарита', time: '10:51', text: 'Ну да(( наверное так лучше. Спасибо', theme: 'Размышления' },
+            { author: 'Ксюша', time: '10:52', text: 'и ты ничего не пропускаешь) я бы поделилась бы с тобой с радостью, если бы было бы чем. Так что без каких либо мук выбора - просто наслаждайся сегодняшним днем, пожалуйста!', theme: 'Взаимопомощь' },
+            { author: 'Елизавета Семченко', time: '10:56', text: 'Ребята, проблема. Я не знаю, как закрывать клиента. Человек ранее уже был на негативе... Я не могу зайти в личный кабинет, чтобы оплатить обучение... она уже недовольна, ей уже ничего не хочется... Что мне делать?', theme: 'Проблемы с клиентами' },
+            { author: 'Ксюша', time: '10:58', text: 'Я знаешь как ещё делала. Одноразовый пароль сама вписывала. Заходила и ей кидала. А потом она меняет. Но не знаю насколько это легальный способ.', theme: 'Взаимопомощь' },
+            { author: 'Никита Абрашев', time: '10:59', text: 'молиться', theme: 'Юмор' },
+            { author: 'Ксюша', time: '10:59', text: 'Сейчас я тебе покажу. Заходим в админку. Заходим, клиент, карточка клиента. И вот здесь есть e-mail, есть новый пароль. Я сюда вводила одноразовый пароль, сохраняла и отсылала ей.', theme: 'Взаимопомощь' },
+            { author: 'Елизавета Семченко', time: '11:02', text: 'Я похер, блин, тут человеку надо помочь. Это же как бы тоже, возможно, мои деньги. Если я ей сейчас помогу как-то зайти в личный кабинет, то ништяк же будет.', theme: 'Проблемы с клиентами' },
+            { author: 'Роман', time: '11:10', text: 'Кстати говоря, всем, кому не приходит пароль на почту... я обычно пишу имя и последние четыре цифры этого номера. Устанавливаю простой, отправляю в WhatsApp, говорю, потом, как зайдете, поменяйте в личном кабинете.', theme: 'Взаимопомощь' },
+            { author: 'Елизавета Семченко', time: '11:13', text: 'задала ей пароль кароче и написала на почту, но письмо не отправляется ахахахха', theme: 'Проблемы с клиентами' },
+            { author: 'Елизавета Семченко', time: '11:18', text: 'потом она вводит пароль, но пишет что неверный. да она где-то сама тупит', theme: 'Проблемы с клиентами' },
+            { author: 'Ксюша', time: '11:18', text: 'ох, затупочек. и лезут в интернет. тут с паролем уже не может разобраться', theme: 'Юмор' },
+            { author: 'Никита Абрашев', time: '11:29', text: 'это когда счет для юр лиц выставляют сутками', theme: 'Рабочие процессы' },
+            { author: 'Маргарита', time: '11:30', text: 'У меня оплата из за рубежа третий день проблема решается', theme: 'Рабочие процессы' },
+            { author: 'Ксюша', time: '11:31', text: 'выпала клевая путевка в Египет горящая... моя первая заграница...', theme: 'Планы на отпуск' },
+            { author: 'Елизавета Семченко', time: '11:35', text: 'Эх, а я в Тай хочу и в Дагестан и в Китай', theme: 'Планы на отпуск' },
+            { author: 'Маргарита', time: '11:36', text: 'Я на бали или шри ланку. Посмотреть на океан и полазить там по зелени', theme: 'Планы на отпуск' },
+            { author: 'Маргарита', time: '11:46', text: 'Ксюш, ну смотри, я могу 27 июля выйти на работу... если тебе нужно, чтобы все там у тебя срослось, все твои мечты сбылись, то вообще я 27-го могу выйти на работу.', theme: 'Взаимопомощь' },
+            { author: 'Елизавета Семченко', time: '11:48', text: 'Я тут пытаюсь по ДМС записаться, оказывается, это вообще не супер, блядь, просто.', theme: 'Бытовые вопросы' },
+            { author: 'Роман', time: '11:49', text: 'Очень просто. В приложении ебло. Позвони по телефону.', theme: 'Взаимопомощь' },
+            { author: 'Маргарита', time: '11:56', text: '...поэтому не парься, позвонишь, там скажешь, если что, жалобы скажи. Заколебалась, работать сложно. Вот она, жалоба на все случаи жизни.', theme: 'Юмор' },
+            { author: 'Роман', time: '11:59', text: 'Я вот звонил и говорил, у меня проблема с голосом, меня направили в клинику... Просто могут отправить в хуевую клинику, тут есть только один минус', theme: 'Бытовые вопросы' },
+            { author: 'Александра Андреевна В', time: '12:25', text: 'Да, кошечка моя, тебе нужно позвонить, записаться по ДМС... Ты можешь позвонить на горячую линию ДМС и сразу спросить, входит ли в наш ДМС то-то, то-то. И они тебе скажут.', theme: 'Взаимопомощь' },
+            { author: 'Ксюша', time: '12:54', text: 'я маленькая играла в гта сан андреас, после школы приходила и давай шлюх давить', theme: 'Юмор' },
+            { author: 'Никита Абрашев', time: '15:03', text: 'ахуенно, из-за того что бухгалтерия не может нормально счет выставлять и не тянуть сутками, один клиент уже ушел', theme: 'Рабочие процессы' },
+            { author: 'Елизавета Семченко', time: '15:49', text: 'Питер стал самым уставшим городом России — огромное количество жителей испытывают эмоциональное выгорание.', theme: 'Размышления' },
+            { author: 'Роман', time: '16:03', text: 'Это наша жизнь 😂 Вся жизнь мем', theme: 'Юмор' },
+            { author: 'Роман', time: '18:51', text: 'Одиночный зуб... В коллекцию. Оставляли заявку на курс, мне нужно зубы вставить 1 октября', theme: 'Абсурд дня' },
+            { author: 'Ксюша', time: '18:52', text: 'чтоб настолько у беременных отшибало, я сперва подумала, что она пьяная', theme: 'Абсурд дня' },
+            { author: 'Ксюша', time: '18:57', text: 'как ей зуб делать если через пять минут в конце недели рожать. я молчу про интернет маркетолога', theme: 'Абсурд дня' },
+            { author: 'Ксюша', time: '19:31', text: 'короче, я рада, что сегодня закончилось рабочее. я как в цирке побывала. три последних разговора и что-то неадекватное, словно люди сломались разом...', theme: 'Размышления' },
+        ];
+
+        const participants = [...new Set(chatData.map(item => item.author))];
+        const themes = [...new Set(chatData.map(item => item.theme))];
+
+        const authorColors = {
+            'Елизавета Семченко': 'text-rose-600',
+            'Маргарита': 'text-emerald-600',
+            'Ксюша': 'text-sky-600',
+            'Никита Абрашев': 'text-indigo-600',
+            'Роман': 'text-amber-600',
+            'Александра Андреевна В': 'text-fuchsia-600',
+        };
+
+        const themeColors = {
+            'Тех. проблемы': 'bg-red-100 text-red-800',
+            'Размышления': 'bg-gray-100 text-gray-800',
+            'Взаимопомощь': 'bg-green-100 text-green-800',
+            'Проблемы с клиентами': 'bg-orange-100 text-orange-800',
+            'Юмор': 'bg-yellow-100 text-yellow-800',
+            'Рабочие процессы': 'bg-blue-100 text-blue-800',
+            'Планы на отпуск': 'bg-teal-100 text-teal-800',
+            'Бытовые вопросы': 'bg-purple-100 text-purple-800',
+            'Абсурд дня': 'bg-pink-100 text-pink-800',
+        };
+        
+        let activeParticipantFilter = 'all';
+        let activeThemeFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupFilters();
+            renderTimeline(chatData);
+            createParticipantsChart();
+            createTopicsChart();
+            
+            document.getElementById('participants-count').textContent = participants.length;
+        });
+
+        function setupFilters() {
+            const participantFiltersContainer = document.getElementById('participant-filters');
+            const themeFiltersContainer = document.getElementById('theme-filters');
+
+            let participantButtons = `<button class="filter-btn active" data-filter="all" data-type="participant">Все</button>`;
+            participants.forEach(p => {
+                participantButtons += `<button class="filter-btn" data-filter="${p}" data-type="participant">${p}</button>`;
+            });
+            participantFiltersContainer.innerHTML = participantButtons;
+
+            let themeButtons = `<button class="filter-btn active" data-filter="all" data-type="theme">Все темы</button>`;
+            themes.forEach(t => {
+                themeButtons += `<button class="filter-btn" data-filter="${t}" data-type="theme">${t}</button>`;
+            });
+            themeFiltersContainer.innerHTML = themeButtons;
+            
+            document.querySelectorAll('.filter-btn').forEach(button => {
+                button.className = 'filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors';
+                if(button.dataset.filter === 'all') {
+                    button.classList.add('active');
+                }
+                button.addEventListener('click', handleFilterClick);
+            });
+        }
+        
+        function handleFilterClick(event) {
+            const filter = event.target.dataset.filter;
+            const type = event.target.dataset.type;
+
+            if (type === 'participant') {
+                activeParticipantFilter = filter;
+            } else if (type === 'theme') {
+                activeThemeFilter = filter;
+            }
+            
+            document.querySelectorAll(`.filter-btn[data-type="${type}"]`).forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            let filteredData = chatData;
+
+            if (activeParticipantFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.author === activeParticipantFilter);
+            }
+
+            if (activeThemeFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.theme === activeThemeFilter);
+            }
+
+            renderTimeline(filteredData);
+        }
+
+        function renderTimeline(data) {
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineContainer.innerHTML = '';
+            if (data.length === 0) {
+                timelineContainer.innerHTML = `<div class="text-center text-gray-500 p-8 bg-white rounded-lg shadow">Нет сообщений, соответствующих вашим фильтрам.</div>`;
+                return;
+            }
+            data.forEach(item => {
+                const authorColorClass = authorColors[item.author] || 'text-gray-700';
+                const themeColorClass = themeColors[item.theme] || 'bg-gray-100 text-gray-800';
+
+                const messageEl = document.createElement('div');
+                messageEl.className = 'bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4';
+                messageEl.innerHTML = `
+                    <div class="flex-shrink-0 w-full sm:w-40">
+                        <p class="font-bold ${authorColorClass}">${item.author}</p>
+                        <p class="text-xs text-gray-400">${item.time}</p>
+                    </div>
+                    <div class="flex-grow border-t sm:border-t-0 sm:border-l border-gray-200 pt-4 sm:pt-0 sm:pl-4">
+                        <p class="text-gray-800 whitespace-pre-wrap">${item.text}</p>
+                        <div class="mt-3">
+                            <span class="theme-tag ${themeColorClass}">${item.theme}</span>
+                        </div>
+                    </div>
+                `;
+                timelineContainer.appendChild(messageEl);
+            });
+        }
+
+        function createParticipantsChart() {
+            const ctx = document.getElementById('participantsChart').getContext('2d');
+            const messageCounts = participants.map(p => {
+                return chatData.filter(msg => msg.author === p).length;
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: participants,
+                    datasets: [{
+                        label: 'Количество сообщений',
+                        data: messageCounts,
+                        backgroundColor: Object.values(authorColors).map(c => c.replace('text-', 'bg-').replace('-600', '-400')),
+                        borderColor: Object.values(authorColors).map(c => c.replace('text-', 'border-').replace('-600', '-600')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTopicsChart() {
+            const ctx = document.getElementById('topicsChart').getContext('2d');
+            const topicCounts = themes.map(t => {
+                return chatData.filter(msg => msg.theme === t).length;
+            });
+            const backgroundColors = themes.map(t => themeColors[t].split(' ')[0].replace('bg-', 'bg-').replace('-100', '-300'));
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: themes,
+                    datasets: [{
+                        label: 'Темы',
+                        data: topicCounts,
+                        backgroundColor: backgroundColors,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
