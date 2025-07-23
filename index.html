@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Интерактивный отчет: Хроники рабочего дня 23.07.2025</title>
+    <title>Интерактивный отчет с Gemini API: Хроники рабочего дня 23.07.2025</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Calm Harmony (Warm neutrals with soft blue/green accents) -->
-    <!-- Application Structure Plan: A single-page dashboard design. Top section for key daily stats. Main area features an interactive timeline of chat messages filterable by participant and theme (e.g., 'Client Issues', 'Vacation Plans'). A dedicated section for data visualizations (bar chart for message count, donut chart for theme distribution) provides quantitative insights. This structure transforms a linear chat log into an explorable, multi-faceted report, allowing users to quickly grasp key events, analyze communication patterns, and focus on specific topics, which is more usable than a simple text document. -->
+    <!-- Application Structure Plan: A single-page dashboard design. Top section for key daily stats, now including a Gemini-powered sentiment analysis. Main area features an interactive timeline of chat messages filterable by participant and theme. A new Gemini-powered summary button provides a high-level overview. A dedicated section for data visualizations (bar chart, donut chart) provides quantitative insights. This structure transforms a linear chat log into an explorable, multi-faceted report. -->
     <!-- Visualization & Content Choices:
     - Report Info: Communication volume per person -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for details -> Justification: Easily compare participation levels.
     - Report Info: Topics of discussion -> Goal: Inform/Proportions -> Viz: Donut Chart (Chart.js) -> Interaction: Hover for percentage -> Justification: Quickly understand the main focus of the day's conversations.
     - Report Info: Chronological chat log -> Goal: Organize/Inform -> Viz: Themed & color-coded message cards (HTML/CSS) -> Interaction: Filtering by theme/person -> Justification: Structures the narrative and allows focused reading.
-    - Report Info: Absurd client stories -> Goal: Engage/Highlight -> Viz: Stylized blockquotes (HTML/CSS) -> Interaction: None -> Justification: Emphasizes humorous/key moments.
+    - Report Info: Daily Summary -> Goal: Inform/Summarize -> Viz: Modal with generated text -> Interaction: Button click -> Justification: Provides a quick, AI-generated overview of the entire day. Method: Gemini API.
+    - Report Info: Team Sentiment -> Goal: Inform/Analyze -> Viz: Card with text and button -> Interaction: Button click -> Justification: Dynamically analyzes the team's mood. Method: Gemini API.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* neutral-50 */
+            background-color: #f8fafc;
         }
         .chart-container {
             position: relative;
@@ -38,7 +39,7 @@
             }
         }
         .filter-btn.active {
-            background-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6;
             color: white;
             border-color: #3b82f6;
         }
@@ -48,6 +49,39 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 500;
+        }
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -60,7 +94,6 @@
         </header>
 
         <main>
-            <!-- Dashboard Section -->
             <section id="dashboard" class="mb-12">
                  <div class="text-center mb-6">
                     <h2 class="text-2xl font-semibold text-gray-800">Сводка дня</h2>
@@ -75,9 +108,12 @@
                         <p class="text-3xl font-bold text-emerald-600" id="messages-count">230+</p>
                         <p class="text-sm text-gray-500 mt-1">Сообщений</p>
                     </div>
-                    <div class="bg-white p-4 rounded-lg shadow">
-                        <p class="text-3xl font-bold text-amber-600">🤯</p>
-                        <p class="text-sm text-gray-500 mt-1">Настроение</p>
+                    <div class="bg-white p-4 rounded-lg shadow flex flex-col justify-between">
+                         <div id="sentiment-display" class="flex-grow flex items-center justify-center">
+                            <p class="text-3xl font-bold text-amber-600">🤔</p>
+                         </div>
+                         <p class="text-sm text-gray-500 mt-1">Настроение ✨</p>
+                         <button id="analyze-sentiment-btn" class="mt-2 text-xs bg-blue-500 text-white py-1 px-2 rounded-full hover:bg-blue-600 transition-colors">Анализировать</button>
                     </div>
                     <div class="bg-white p-4 rounded-lg shadow">
                         <p class="text-lg font-semibold text-rose-600 truncate">Проблема с паролем</p>
@@ -86,7 +122,6 @@
                 </div>
             </section>
 
-            <!-- Visualizations Section -->
             <section id="visuals" class="mb-12 bg-white p-6 rounded-lg shadow">
                 <div class="text-center mb-8">
                     <h2 class="text-2xl font-semibold text-gray-800">Аналитика дня</h2>
@@ -108,14 +143,15 @@
                 </div>
             </section>
 
-            <!-- Timeline Section -->
             <section id="timeline">
                 <div class="text-center mb-8">
                     <h2 class="text-2xl font-semibold text-gray-800">Лента событий</h2>
-                    <p class="mt-2 text-gray-600">Полная хроника событий дня. Используйте фильтры ниже, чтобы сосредоточиться на сообщениях конкретных участников или на определенных темах, таких как решение проблем, взаимопомощь или планирование отпуска.</p>
+                    <p class="mt-2 text-gray-600">Полная хроника событий дня. Используйте фильтры ниже или сгенерируйте краткую сводку с помощью Gemini.</p>
+                    <button id="generate-summary-btn" class="mt-4 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-indigo-700 transition-colors flex items-center gap-2 mx-auto">
+                        ✨ Сгенерировать сводку дня
+                    </button>
                 </div>
                 
-                <!-- Filters -->
                 <div class="bg-white p-4 rounded-lg shadow mb-8 sticky top-0 z-10">
                     <div class="mb-4">
                         <h3 class="font-semibold text-gray-700 mb-2">Фильтр по участникам:</h3>
@@ -127,12 +163,19 @@
                     </div>
                 </div>
 
-                <!-- Messages Container -->
-                <div id="timeline-container" class="space-y-6">
-                    <!-- Messages will be injected here by JS -->
-                </div>
+                <div id="timeline-container" class="space-y-6"></div>
             </section>
         </main>
+    </div>
+
+    <div id="summary-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">Сводка дня от Gemini ✨</h3>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div id="summary-content" class="text-gray-700 space-y-4"></div>
+        </div>
     </div>
 
     <script>
@@ -175,28 +218,8 @@
 
         const participants = [...new Set(chatData.map(item => item.author))];
         const themes = [...new Set(chatData.map(item => item.theme))];
-
-        const authorColors = {
-            'Елизавета Семченко': 'text-rose-600',
-            'Маргарита': 'text-emerald-600',
-            'Ксюша': 'text-sky-600',
-            'Никита Абрашев': 'text-indigo-600',
-            'Роман': 'text-amber-600',
-            'Александра Андреевна В': 'text-fuchsia-600',
-        };
-
-        const themeColors = {
-            'Тех. проблемы': 'bg-red-100 text-red-800',
-            'Размышления': 'bg-gray-100 text-gray-800',
-            'Взаимопомощь': 'bg-green-100 text-green-800',
-            'Проблемы с клиентами': 'bg-orange-100 text-orange-800',
-            'Юмор': 'bg-yellow-100 text-yellow-800',
-            'Рабочие процессы': 'bg-blue-100 text-blue-800',
-            'Планы на отпуск': 'bg-teal-100 text-teal-800',
-            'Бытовые вопросы': 'bg-purple-100 text-purple-800',
-            'Абсурд дня': 'bg-pink-100 text-pink-800',
-        };
-        
+        const authorColors = { 'Елизавета Семченко': 'text-rose-600', 'Маргарита': 'text-emerald-600', 'Ксюша': 'text-sky-600', 'Никита Абрашев': 'text-indigo-600', 'Роман': 'text-amber-600', 'Александра Андреевна В': 'text-fuchsia-600',};
+        const themeColors = { 'Тех. проблемы': 'bg-red-100 text-red-800', 'Размышления': 'bg-gray-100 text-gray-800', 'Взаимопомощь': 'bg-green-100 text-green-800', 'Проблемы с клиентами': 'bg-orange-100 text-orange-800', 'Юмор': 'bg-yellow-100 text-yellow-800', 'Рабочие процессы': 'bg-blue-100 text-blue-800', 'Планы на отпуск': 'bg-teal-100 text-teal-800', 'Бытовые вопросы': 'bg-purple-100 text-purple-800', 'Абсурд дня': 'bg-pink-100 text-pink-800',};
         let activeParticipantFilter = 'all';
         let activeThemeFilter = 'all';
 
@@ -205,31 +228,91 @@
             renderTimeline(chatData);
             createParticipantsChart();
             createTopicsChart();
-            
             document.getElementById('participants-count').textContent = participants.length;
+            setupModal();
+            setupGeminiFeatures();
         });
+        
+        async function callGeminiAPI(prompt) {
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error("Unexpected API response structure:", result);
+                    return "Не удалось получить ответ от нейросети. Структура ответа некорректна.";
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return "Ошибка при обращении к нейросети. Пожалуйста, проверьте консоль для получения подробной информации.";
+            }
+        }
+
+        function setupGeminiFeatures() {
+            const summaryBtn = document.getElementById('generate-summary-btn');
+            const sentimentBtn = document.getElementById('analyze-sentiment-btn');
+            const summaryContent = document.getElementById('summary-content');
+            const sentimentDisplay = document.getElementById('sentiment-display');
+
+            summaryBtn.addEventListener('click', async () => {
+                summaryContent.innerHTML = '<div class="flex justify-center items-center"><div class="spinner"></div></div>';
+                document.getElementById('summary-modal').style.display = 'flex';
+                
+                const fullChatText = chatData.map(msg => `${msg.author}: ${msg.text}`).join('\n');
+                const prompt = `Проанализируй этот рабочий чат и напиши краткую сводку дня. Отрази основные проблемы, предложенные решения и общее настроение в команде. Ответ дай в формате Markdown. \n\nВот чат:\n${fullChatText}`;
+                
+                const summary = await callGeminiAPI(prompt);
+                summaryContent.innerHTML = summary.replace(/\n/g, '<br>');
+            });
+
+            sentimentBtn.addEventListener('click', async () => {
+                sentimentDisplay.innerHTML = '<div class="spinner mx-auto"></div>';
+                const fullChatText = chatData.map(msg => `${msg.author}: ${msg.text}`).join('\n');
+                const prompt = `Проанализируй настроение этого рабочего чата. Дай ответ одним словом (например, "Стрессовый", "Продуктивный", "Смешанный") и через двоеточие дай краткое пояснение в одно предложение. \n\nВот чат:\n${fullChatText}`;
+                
+                const sentiment = await callGeminiAPI(prompt);
+                const [mood, ...reason] = sentiment.split(':');
+                sentimentDisplay.innerHTML = `<p class="text-xl font-bold text-amber-600" title="${reason.join(':').trim()}">${mood.trim()}</p>`;
+            });
+        }
+
+        function setupModal() {
+            const modal = document.getElementById('summary-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            closeModalBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
 
         function setupFilters() {
             const participantFiltersContainer = document.getElementById('participant-filters');
             const themeFiltersContainer = document.getElementById('theme-filters');
-
             let participantButtons = `<button class="filter-btn active" data-filter="all" data-type="participant">Все</button>`;
-            participants.forEach(p => {
-                participantButtons += `<button class="filter-btn" data-filter="${p}" data-type="participant">${p}</button>`;
-            });
+            participants.forEach(p => { participantButtons += `<button class="filter-btn" data-filter="${p}" data-type="participant">${p}</button>`; });
             participantFiltersContainer.innerHTML = participantButtons;
-
             let themeButtons = `<button class="filter-btn active" data-filter="all" data-type="theme">Все темы</button>`;
-            themes.forEach(t => {
-                themeButtons += `<button class="filter-btn" data-filter="${t}" data-type="theme">${t}</button>`;
-            });
+            themes.forEach(t => { themeButtons += `<button class="filter-btn" data-filter="${t}" data-type="theme">${t}</button>`; });
             themeFiltersContainer.innerHTML = themeButtons;
-            
             document.querySelectorAll('.filter-btn').forEach(button => {
                 button.className = 'filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors';
-                if(button.dataset.filter === 'all') {
-                    button.classList.add('active');
-                }
+                if(button.dataset.filter === 'all') button.classList.add('active');
                 button.addEventListener('click', handleFilterClick);
             });
         }
@@ -237,30 +320,17 @@
         function handleFilterClick(event) {
             const filter = event.target.dataset.filter;
             const type = event.target.dataset.type;
-
-            if (type === 'participant') {
-                activeParticipantFilter = filter;
-            } else if (type === 'theme') {
-                activeThemeFilter = filter;
-            }
-            
+            if (type === 'participant') activeParticipantFilter = filter;
+            else if (type === 'theme') activeThemeFilter = filter;
             document.querySelectorAll(`.filter-btn[data-type="${type}"]`).forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-
             applyFilters();
         }
 
         function applyFilters() {
             let filteredData = chatData;
-
-            if (activeParticipantFilter !== 'all') {
-                filteredData = filteredData.filter(item => item.author === activeParticipantFilter);
-            }
-
-            if (activeThemeFilter !== 'all') {
-                filteredData = filteredData.filter(item => item.theme === activeThemeFilter);
-            }
-
+            if (activeParticipantFilter !== 'all') filteredData = filteredData.filter(item => item.author === activeParticipantFilter);
+            if (activeThemeFilter !== 'all') filteredData = filteredData.filter(item => item.theme === activeThemeFilter);
             renderTimeline(filteredData);
         }
 
@@ -274,7 +344,6 @@
             data.forEach(item => {
                 const authorColorClass = authorColors[item.author] || 'text-gray-700';
                 const themeColorClass = themeColors[item.theme] || 'bg-gray-100 text-gray-800';
-
                 const messageEl = document.createElement('div');
                 messageEl.className = 'bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4';
                 messageEl.innerHTML = `
@@ -287,75 +356,29 @@
                         <div class="mt-3">
                             <span class="theme-tag ${themeColorClass}">${item.theme}</span>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 timelineContainer.appendChild(messageEl);
             });
         }
 
         function createParticipantsChart() {
             const ctx = document.getElementById('participantsChart').getContext('2d');
-            const messageCounts = participants.map(p => {
-                return chatData.filter(msg => msg.author === p).length;
-            });
-
+            const messageCounts = participants.map(p => chatData.filter(msg => msg.author === p).length);
             new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: participants,
-                    datasets: [{
-                        label: 'Количество сообщений',
-                        data: messageCounts,
-                        backgroundColor: Object.values(authorColors).map(c => c.replace('text-', 'bg-').replace('-600', '-400')),
-                        borderColor: Object.values(authorColors).map(c => c.replace('text-', 'border-').replace('-600', '-600')),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    scales: {
-                        x: {
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
+                data: { labels: participants, datasets: [{ label: 'Количество сообщений', data: messageCounts, backgroundColor: Object.values(authorColors).map(c => c.replace('text-', 'bg-').replace('-600', '-400')), borderColor: Object.values(authorColors).map(c => c.replace('text-', 'border-').replace('-600', '-600')), borderWidth: 1 }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
             });
         }
 
         function createTopicsChart() {
             const ctx = document.getElementById('topicsChart').getContext('2d');
-            const topicCounts = themes.map(t => {
-                return chatData.filter(msg => msg.theme === t).length;
-            });
+            const topicCounts = themes.map(t => chatData.filter(msg => msg.theme === t).length);
             const backgroundColors = themes.map(t => themeColors[t].split(' ')[0].replace('bg-', 'bg-').replace('-100', '-300'));
-
             new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: themes,
-                    datasets: [{
-                        label: 'Темы',
-                        data: topicCounts,
-                        backgroundColor: backgroundColors,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                    }
-                }
+                data: { labels: themes, datasets: [{ label: 'Темы', data: topicCounts, backgroundColor: backgroundColors, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
             });
         }
     </script>
